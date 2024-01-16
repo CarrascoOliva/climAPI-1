@@ -1,6 +1,7 @@
 const INDEXDB_NAME = "staticDB";
 const INDEXDB_VERSION = 1;
 const STORE_NAME = "staticStore";
+let db;
 
 function openDB() {
   // Promesa para manejar operaciones asíncronas
@@ -30,7 +31,7 @@ function openDB() {
         // Crea un almacen de objetos (tabla), campo id como clave primaria y autoincremental
         let objectStore = db.createObjectStore(STORE_NAME, {
           keyPath: "id",
-          autoIncrement: true,
+          autoIncrement: false,
         });
         objectStore.createIndex("province", "province", { unique: true });
       }
@@ -59,15 +60,16 @@ function getPriovinceDB(key) {
   });
 }
 
-function addProvinceDB(data) {
+function addProvinceDB(data, idProv) {
   openDB().then(() => {
     return new Promise((resolve, reject) => {
+      console.log(db);
       // variables de indexDB
       let transaction = db.transaction([STORE_NAME], "readwrite");
       let objectStore = transaction.objectStore(STORE_NAME);
 
       // accionar get
-      let request = objectStore.add(data);
+      let request = objectStore.put({id: idProv, value: data});
 
       // resuelve add
       request.onsuccess = (event) => {
@@ -118,23 +120,67 @@ function updateDB(key, provinceContent) {
 }
 
 function getAllDB() {
-    return new Promise((resolve, reject) => {
-      // variables de indexDB
-      let transaction = db.transaction([STORE_NAME], "readwrite");
-      let objectStore = transaction.objectStore(STORE_NAME);
-  
-      // accionar getAll
-      let request = objectStore.getAll();
-  
-      // si request funciona devuelve lista con todos los objetos
-      request.onsuccess = (event) => {
-        console.log(request.result);
-        resolve(request.result);
-      };
-  
-      // si request falla manda error
-      request.onerror = (event) => {
-        reject(event.target.error);
-      };
-    });
-  }
+  return new Promise((resolve, reject) => {
+    // variables de indexDB
+    let transaction = db.transaction([STORE_NAME], "readwrite");
+    let objectStore = transaction.objectStore(STORE_NAME);
+
+    // accionar getAll
+    let request = objectStore.getAll();
+
+    // si request funciona devuelve lista con todos los objetos
+    request.onsuccess = (event) => {
+      console.log(request.result);
+      resolve(request.result);
+    };
+
+    // si request falla manda error
+    request.onerror = (event) => {
+      reject(event.target.error);
+    };
+  });
+}
+
+function indexDBProvinceExists() {
+  return new Promise((resolve, reject) => {
+    var request = indexedDB.open(INDEXDB_NAME);
+    request.onupgradeneeded = (e) => {
+      resolve(false);
+    };
+    request.onerror = (e) => {
+      resolve(false);
+    };
+    request.onsuccess = (e) => {
+      resolve(true);
+    };
+  });
+}
+
+/**
+ * Ejemplo objetos comunidad autonoma:
+ * {
+ *  name : "nombre comunidad",
+ *  id: "id comunidad",
+ *  provinces: [
+  *  {
+  * name: "nombre de provincia",
+  *  id: "id provicia"
+  *  cities: [
+    *  {
+    * name: "localidad",
+    *  id: "id localidad"
+    * }, ....
+    * ]
+  * }, ...
+  * ]
+ * }
+ */
+
+export {
+  openDB,
+  getPriovinceDB,
+  addProvinceDB,
+  updateDB,
+  getAllDB,
+  indexDBProvinceExists,
+};
